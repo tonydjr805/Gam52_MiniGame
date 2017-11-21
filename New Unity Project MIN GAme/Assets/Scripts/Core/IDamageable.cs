@@ -3,5 +3,7 @@ using System.Collections;
 
 public interface IDamageable
 {
-    void TakeDamage(float damage);
+	void TakeHit(float damage, RaycastHit hit);
+
+	void TakeDamage(float damage);
 }

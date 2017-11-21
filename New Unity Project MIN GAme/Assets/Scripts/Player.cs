@@ -12,8 +12,9 @@ public class Player : Actor
 	GunController gunController;
 
 	// Use this for initialization
-	void Start () 
+	protected override void Start () 
 	{
+		base.Start ();
 		controller = GetComponent<PlayerController> ();
 		gunController = GetComponent<GunController> ();
 		viewCamera = Camera.main;
