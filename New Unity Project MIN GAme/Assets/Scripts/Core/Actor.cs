@@ -4,54 +4,56 @@ using UnityEngine;
 //
 public class Actor : MonoBehaviour, IDamageable
 {
-    [SerializeField] private float damage = 1;
-    [SerializeField] private float hitPoints = 1;
+    [SerializeField] internal float damage = 1;
+    [SerializeField] protected float maxHitpoint;
+    [SerializeField] private bool isAI;
     [SerializeField] protected bool usePhysics = true;
     [SerializeField] protected Vector3 movementDirection;
-    [SerializeField] private GameObject deathPrefab;
-    private float maxHitpoint;
-    protected Rigidbody rigidbody = null;
+    [SerializeField] private string deathPrefab;
+    protected float hitPoints;
+    protected Rigidbody body = null;
     protected GameObject source;
-
+    public string[] ObjectsToFall;
+    public float chanceToFall;
     public float Speed
     {
         get
         {
             if (!usePhysics)
-                return rigidbody.velocity.magnitude;
+                return body.velocity.magnitude;
             else
                 return movementDirection.magnitude;
         }
         set
         {
-            if (rigidbody == null)
-                rigidbody = GetComponent<Rigidbody>();
+            if (body == null)
+                body = GetComponent<Rigidbody>();
             Vector3 newVelocity;
-            if (rigidbody.velocity == Vector3.zero)
+            if (body.velocity == Vector3.zero)
                 newVelocity = transform.forward;
             else
-                newVelocity = rigidbody.velocity.normalized;
+                newVelocity = body.velocity.normalized;
 
             newVelocity *= value;
-            rigidbody.velocity = newVelocity;
+            body.velocity = newVelocity;
         }
     }
 
 
     protected virtual void Awake()
     {
-        rigidbody = GetComponent<Rigidbody>();
+        body = GetComponent<Rigidbody>();
     }
 
-    public void Start()
+    public virtual void Start()
     {
         maxHitpoint = hitPoints;
     }
 
-    public void OnEnable()
+    public virtual void OnEnable()
     {
         hitPoints = maxHitpoint;
-        rigidbody = GetComponent<Rigidbody>();
+        body = GetComponent<Rigidbody>();
     }
 
     protected virtual void FixedUpdate()
@@ -59,50 +61,75 @@ public class Actor : MonoBehaviour, IDamageable
         MoveByVector(movementDirection);
     }
 
-    protected void OnCollisionEnter(Collision collision)
+    public virtual void OnCollisionEnter(Collision collision)
     {
-        Actor actor = collision.transform.gameObject.GetComponent<Actor>();
+        Actor actor = collision.gameObject.GetComponent<Actor>();
         if (actor != null)
         {
             actor.TakeDamage(damage);
         }
     }
-    protected void OnTriggerEnter(Collider other)
+    public virtual void OnTriggerEnter(Collider other)
     {
-        Actor actor = other.transform.gameObject.GetComponent<Actor>();
+        Actor actor = other.GetComponent<Actor>();
         if (actor != null)
         {
             actor.TakeDamage(damage);
+        }
+
+        if (other.tag == "Collectable" && !isAI)
+        {
+            GameManager.instance.GivePoint();
+            ObjectPooling.instance.DestroyAPS(other.gameObject);
         }
     }
 
     protected void MoveByVector(Vector3 movement)
     {
+        if (isAI)
+            return;
+
         if (!usePhysics)
         {
             transform.position += movement * Time.fixedDeltaTime;
         }
         else
         {
-            rigidbody.velocity = movement;
+            body.velocity = movement;
         }
     }
     
     public void TakeDamage(float damageAmount)
     {
         hitPoints -= damageAmount;
+
         if (hitPoints <= 0)
         {
-            if(deathPrefab != null)
-                Instantiate(deathPrefab, transform.position, Quaternion.identity);
+            if(isAI)
+            {
+                chanceToFall = Random.Range(0, 10);
+                if (chanceToFall > 7)
+                {
+                    ObjectPooling.instance.InstantiateAPS(ObjectsToFall[Random.Range(0, ObjectsToFall.Length)], transform.position, Quaternion.identity);
+                    Debug.Log(chanceToFall);
+                }
+            }
+           
+            if (string.IsNullOrEmpty(deathPrefab))
+                ObjectPooling.instance.InstantiateAPS(deathPrefab, transform.position, Quaternion.identity);
 
-            //ObjectPooling.instance.DestroyAPS(gameObject);
+            ObjectPooling.instance.DestroyAPS(gameObject);
         }
     }
 
     public void SetSource(GameObject newSource)
     {
         source = newSource;
+    }
+
+    private void OnDestroy()
+    {
+        Debug.LogWarning("Destroy" + gameObject.name);
     }
 
 }

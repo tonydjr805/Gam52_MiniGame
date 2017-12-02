@@ -1,5 +1,6 @@
 ﻿using UnityEngine;
 using System.Collections;
+using System.Collections.Generic;
 
 [RequireComponent (typeof (PlayerController))]
 [RequireComponent (typeof (GunController))]
@@ -11,13 +12,19 @@ public class Player : Actor
 	PlayerController controller;
 	GunController gunController;
 
+
+
+    internal MeshRenderer meshRenderer;
+
 	// Use this for initialization
-	void Start () 
+    public override void Start () 
 	{
+        base.Start();
 		controller = GetComponent<PlayerController> ();
 		gunController = GetComponent<GunController> ();
-		viewCamera = Camera.main;
-	}
+        viewCamera = Camera.main;
+        meshRenderer = GetComponent<MeshRenderer>();
+    }
 
 	// Update is called once per frame
 	void Update () 
@@ -40,9 +47,11 @@ public class Player : Actor
 		}
 
 		// Weapon Input
-		if (Input.GetMouseButtonDown (0)) 
+		if (Input.GetMouseButton (0)) 
 		{
 			gunController.Shoot ();
 		}
+
+        GameManager.instance.healthSlider.value = hitPoints;
 	}
 }
