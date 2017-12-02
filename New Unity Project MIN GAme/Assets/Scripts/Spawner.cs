@@ -1,61 +1,55 @@
 ﻿using UnityEngine;
 using System.Collections;
 
-public class Spawner : MonoBehaviour 
+
+[System.Serializable]
+public class ObjectToSpawn
 {
-	public Wave[] waves;
-	public Enemy enemy;
+    public string objectName;
+    public float minTimeToSpawn, maxTimeToSpawn;
+    internal float timeToSpawn;
+    public Color flashColor;
+}
+public class Spawner : MonoBehaviour {
 
-	Wave currentWave;
-	int currentWaveNumber;
+    public ObjectToSpawn[] objectToSpawn;
+    int index;
+    public MapGeneraotor map;
 
-	int enemiesRemainingToSpawn;
-	int enemiesRemainingAlive;
-	float nextSpawnTime;
+    private void Start()
+    {
+        objectToSpawn[index].timeToSpawn = Random.Range(objectToSpawn[index].minTimeToSpawn, objectToSpawn[index].maxTimeToSpawn);
+        InvokeRepeating("SpawnObject", objectToSpawn[index].timeToSpawn, objectToSpawn[index].timeToSpawn);
+    }
 
-	void Start()
-	{
-		NextWave ();
-	}
+    void SpawnObject()
+    {
+        StartCoroutine(SpawnCo());
+    }
 
-	void Update()
-	{
-		if (enemiesRemainingToSpawn > 0 && Time.time > nextSpawnTime)
-		{
-			enemiesRemainingToSpawn--;
-			nextSpawnTime = Time.time + currentWave.timeBetweenSpawns;
+    IEnumerator SpawnCo()
+    {
+        float tileFlashSpeed = 4;
+        Transform randomTile = map.GetRandomOpenTile();
+        Material tileMat = randomTile.GetComponent<MeshRenderer>().material;
+        Color initalColor = tileMat.color;
+        float spawnTimer = 0;
 
-			Enemy spawnedEnemy = Instantiate (enemy, Vector3.zero, Quaternion.identity) as Enemy; 
-			spawnedEnemy.OnDeath += OnEnemyDeath;
-		}
-	}
 
-	void OnEnemyDeath()
-	{
-		enemiesRemainingAlive--;
+        while (spawnTimer < objectToSpawn[index].timeToSpawn)
+        {
+            tileMat.color = Color.Lerp(initalColor, objectToSpawn[index].flashColor, Mathf.PingPong(spawnTimer * tileFlashSpeed, 1));
+            spawnTimer += Time.deltaTime;
+            yield return null;
+        }
+        tileMat.color = initalColor;
+        ObjectPooling.instance.InstantiateAPS(objectToSpawn[index].objectName, randomTile.position + Vector3.up, Quaternion.identity);
+        objectToSpawn[index].timeToSpawn = Random.Range(objectToSpawn[index].minTimeToSpawn, objectToSpawn[index].maxTimeToSpawn);
+        index++;
 
-		if (enemiesRemainingAlive == 0) 
-		{
-			NextWave ();
-		}
-	}
+        if (index == objectToSpawn.Length)
+            index = 0;
+        
 
-	void NextWave()
-	{
-		currentWaveNumber++;
-		if (currentWaveNumber - 1 < waves.Length) 
-		{
-			currentWave = waves [currentWaveNumber - 1];
-
-			enemiesRemainingToSpawn = currentWave.enemyCount;
-			enemiesRemainingAlive = enemiesRemainingToSpawn;
-		}
-	}
-
-	[System.Serializable]
-	public class Wave
-	{
-		public int enemyCount;
-		public float timeBetweenSpawns;
-	}
+    }
 }

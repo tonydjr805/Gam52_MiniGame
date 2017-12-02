@@ -1,66 +1,42 @@
 ﻿using UnityEngine;
 using System.Collections;
 
-public class Projectile : MonoBehaviour
+public class Projectile : Actor 
 {
-	public LayerMask collisionMask;
 	float speed = 10;
-	float damage = 1;
-
-	float lifeTime = 3;
-	float skinWidth = .1f;
-
-	void Start()
-	{
-		Destroy (gameObject, lifeTime);
-		Collider[] initialCollisions = Physics.OverlapSphere (transform.position, .1f, collisionMask);
-		if (initialCollisions.Length > 0) 
-		{
-			OnHitObject (initialCollisions [0]);
-		}
-	}
+    float timer;
+    TrailRenderer trail;
 
 	public void SetSpeed(float newSpeed)
 	{
 		speed = newSpeed;
 	}
-	
-	// Update is called once per frame
-	void Update ()
+
+    public override void OnEnable()
+    {
+        base.OnEnable();
+        timer = 0;
+        trail = GetComponent<TrailRenderer>();
+    }
+
+
+    // Update is called once per frame
+    void Update ()
 	{
-		float moveDistance = speed * Time.deltaTime;
-		CheckCollision (moveDistance);
-		transform.Translate (Vector3.forward * moveDistance);
+        timer += Time.deltaTime;
+        if(timer > 2)
+        {
+            ObjectPooling.instance.DestroyAPS(gameObject);
+            trail.Clear();
+        }
+
+        transform.Translate(Vector3.forward * speed * Time.deltaTime);
 	}
 
-	void CheckCollision(float moveDistance)
-	{
-		Ray ray = new Ray (transform.position, transform.forward);
-		RaycastHit hit;
-
-		if (Physics.Raycast (ray, out hit, moveDistance + skinWidth, collisionMask, QueryTriggerInteraction.Collide))
-		{
-			OnHitObject (hit);
-		}
-	}
-
-	void OnHitObject(RaycastHit hit)
-	{
-		IDamageable damageableObject = hit.collider.GetComponent<IDamageable> ();
-		if (damageableObject != null) 
-		{
-			damageableObject.TakeHit (damage, hit);
-		}
-		GameObject.Destroy (gameObject);
-	}
-
-	void OnHitObject(Collider c)
-	{
-		IDamageable damageableObject = c.GetComponent<IDamageable> ();
-		if (damageableObject != null) 
-		{
-			damageableObject.TakeDamage (damage);
-		}
-		GameObject.Destroy (gameObject);
-	}
+    public override void OnCollisionEnter(Collision collision)
+    {
+        base.OnCollisionEnter(collision);
+        trail.Clear();
+        ObjectPooling.instance.DestroyAPS(gameObject);
+    }
 }
